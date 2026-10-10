@@ -39,7 +39,7 @@ jobs:
                   remap = json.loads(z.read(refmap_name))
                   # MixinGradle may emit only loader-specific sections under "data".
                   sections = [remap.get("mappings", {})] + list(remap.get("data", {}).values())
-                  target = "fr.mtrfra.mod.mixin.tab.CreativeModeTabMixin"
+                  target = "fr/mtrfra/mod/mixin/tab/CreativeModeTabMixin"
                   creative_entries = [section.get(target, {}) for section in sections]
                   print("Refmap sections:", [(name, list(section.keys())[:10]) for name, section in
                         [("default", remap.get("mappings", {})), *list(remap.get("data", {}).items())]])
