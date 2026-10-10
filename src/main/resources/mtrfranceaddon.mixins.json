@@ -20,5 +20,6 @@
   },
   "overwrites": {
     "requireAnnotations": true
-  }
+  },
+  "refmap": "mtrfranceaddon.refmap.json"
 }

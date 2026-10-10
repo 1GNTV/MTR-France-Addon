@@ -22,6 +22,26 @@ jobs:
           chmod +x gradlew
           sed -i '/^org.gradle.java.home=/d' gradle.properties
           ./gradlew build -Pminecraft_version=1.20.1 --stacktrace
+      - name: Verify mixin remapping in built JAR
+        working-directory: legacy-forge
+        run: |
+          python3 - <<'PY'
+          import glob, json, zipfile, sys
+          jars = [p for p in glob.glob("build/libs/*.jar") if not any(t in p for t in ("-sources.jar", "-javadoc.jar"))]
+          if not jars:
+              sys.exit("No distributable Forge JAR found")
+          for jar in jars:
+              with zipfile.ZipFile(jar) as z:
+                  config = json.loads(z.read("mtrfranceaddon.mixins.json"))
+                  refmap_name = config.get("refmap")
+                  if refmap_name != "mtrfranceaddon.refmap.json" or refmap_name not in z.namelist():
+                      sys.exit(f"{jar}: Mixin refmap is missing or not declared")
+                  mappings = json.loads(z.read(refmap_name)).get("mappings", {})
+                  creative = mappings.get("fr.mtrfra.mod.mixin.tab.CreativeModeTabMixin", {})
+                  if not any("buildContents" in key for key in creative):
+                      sys.exit(f"{jar}: no mapped CreativeModeTab.buildContents injector target; keys={list(creative)}")
+                  print(f"Verified: {jar}, creative-target={creative}")
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: MTR-France-optimized-forge-1.20.1
