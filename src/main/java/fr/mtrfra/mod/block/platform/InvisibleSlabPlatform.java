@@ -70,14 +70,14 @@ public class InvisibleSlabPlatform extends BlockPlatformSlab implements BlockWit
             if (clientPlayerEntity == null) {
                 return;
             }
-            final StoredMatrixTransformations transformations = new StoredMatrixTransformations(
-                    0.5 + blockEntity.getPos2().getX(), 0.5 + blockEntity.getPos2().getY(), 0.5 + blockEntity.getPos2().getZ()
-            );
             final boolean shouldShowHint = (RenderRails.isHoldingRailRelated(clientPlayerEntity) || clientPlayerEntity.isHolding(ModBlocks.INVISIBLE_SLAB_PLATFORM.get().asItem()))
                     && minecraftClient.getCurrentScreenMapped() == null;
             if (!shouldShowHint) {
                 return;
             }
+            final StoredMatrixTransformations transformations = new StoredMatrixTransformations(
+                    0.5 + blockEntity.getPos2().getX(), 0.5 + blockEntity.getPos2().getY(), 0.5 + blockEntity.getPos2().getZ()
+            );
             final SlabType slabType = SlabBlockExtension.getType(blockEntity.getCachedState2());
             final String texturePath = SlabType.getDoubleMapped().equals(slabType)
                     ? "textures/item/station_equipment/invisible_platform.png"

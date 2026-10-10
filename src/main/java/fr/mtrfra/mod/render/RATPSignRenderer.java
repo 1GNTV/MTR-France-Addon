@@ -16,6 +16,20 @@ import org.mtr.mod.block.IBlock;
 public class RATPSignRenderer extends BlockEntityRenderer<RATPSignBase.BlockEntityBase> {
 
     private static final float TITLE_SCALE_DEFAULT = 1 / 50F;
+    private static final java.util.Map<String, Integer> TEXT_WIDTH_CACHE = new java.util.LinkedHashMap<String, Integer>(256, .75F, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, Integer> item) {
+            return size() > 2048;
+        }
+    };
+
+    private static int cachedTextWidth(String text) {
+        final Integer cached = TEXT_WIDTH_CACHE.get(text);
+        if (cached != null) return cached;
+        final int width = GraphicsHolder.getTextWidth(text);
+        TEXT_WIDTH_CACHE.put(text, width);
+        return width;
+    }
 
     public RATPSignRenderer(Argument argument) {
         super(argument);
@@ -70,7 +84,7 @@ public class RATPSignRenderer extends BlockEntityRenderer<RATPSignBase.BlockEnti
                     break;
             }
         }
-        final float widthAtDefaultScale = GraphicsHolder.getTextWidth(title) * TITLE_SCALE_DEFAULT * 16F;
+        final float widthAtDefaultScale = cachedTextWidth(title) * TITLE_SCALE_DEFAULT * 16F;
         if (availableWidth <= 0F || widthAtDefaultScale <= availableWidth || widthAtDefaultScale <= 0F) {
             return TITLE_SCALE_DEFAULT;
         }
@@ -93,7 +107,7 @@ public class RATPSignRenderer extends BlockEntityRenderer<RATPSignBase.BlockEnti
         if (hasTitle) {
             final float titleY = stackedAsOneBlock ? layout.titleY + blockHalfHeight - titleHeight / 2F + 0.2F : layout.titleY;
             pushTextPose(poseStack, rotationDegrees, layout.titleX, titleY, textZ, titleScale);
-            final int titleX = (int) signBlock.textAlignment().getX(GraphicsHolder.getTextWidth(title));
+            final int titleX = (int) signBlock.textAlignment().getX(cachedTextWidth(title));
             graphicsHolder.drawText(title, titleX, -4, 0xFFFFFF, false, GraphicsHolder.getDefaultLight());
             poseStack.popPose();
         }

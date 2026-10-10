@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 public class VendingMachineEntityRenderer extends EntityRenderer<VendingMachineEntity> {
 
     private final Supplier<BlockRegistryObject> blockSupplier;
+    private BlockState cachedBlockState;
 
     public VendingMachineEntityRenderer(Argument argument, Supplier<BlockRegistryObject> blockSupplier) {
         super(argument);
@@ -33,8 +34,10 @@ public class VendingMachineEntityRenderer extends EntityRenderer<VendingMachineE
         final GraphicsHolderAccessor accessor = (GraphicsHolderAccessor) (Object) graphicsHolder;
         final PoseStack poseStack = accessor.getMatrixStack();
         final MultiBufferSource bufferSource = accessor.getVertexConsumerProvider();
-        final BlockState state =
-                (BlockState) blockSupplier.get().get().getDefaultState().data;
+        if (cachedBlockState == null) {
+            cachedBlockState = (BlockState) blockSupplier.get().get().getDefaultState().data;
+        }
+        final BlockState state = cachedBlockState;
 
         final BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
 

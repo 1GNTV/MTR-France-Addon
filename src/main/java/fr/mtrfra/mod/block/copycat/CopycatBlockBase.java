@@ -306,10 +306,7 @@ public abstract class CopycatBlockBase extends BlockExtension implements BlockWi
             *///? }
             final BlockColors blockColors = Minecraft.getInstance().getBlockColors();
 
-            for (final net.minecraft.core.Direction direction : new net.minecraft.core.Direction[]{
-                    net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.SOUTH,
-                    net.minecraft.core.Direction.EAST, net.minecraft.core.Direction.WEST
-            }) {
+            for (final net.minecraft.core.Direction direction : HORIZONTAL_DIRECTIONS) {
                 final List<BakedQuad> quads = bakedModel.getQuads(mimic, direction, random);
                 if (quads.isEmpty()) {
                     continue;
@@ -380,6 +377,20 @@ public abstract class CopycatBlockBase extends BlockExtension implements BlockWi
             IDrawing.drawTexture(graphicsHolderNew, xFaceX, 0.0F, xStripStart, xFaceX, totalHeight, xStripEnd, xFace, 0xFF00E5FF, GraphicsHolder.getDefaultLight());
         }
 
+        // Immutable face geometry shared by all Copycat render calls.
+        private static final net.minecraft.core.Direction[] HORIZONTAL_DIRECTIONS = {
+                net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.SOUTH,
+                net.minecraft.core.Direction.EAST, net.minecraft.core.Direction.WEST
+        };
+        private static final float[][] NORTH_FACE = {{0, 0, 0}, {1, 0, 0}, {1, 0, 0}, {0, 0, 0}};
+        private static final float[][] SOUTH_FACE = {{1, 0, 1}, {0, 0, 1}, {0, 0, 1}, {1, 0, 1}};
+        private static final float[][] EAST_FACE = {{1, 0, 0}, {1, 0, 1}, {1, 0, 1}, {1, 0, 0}};
+        private static final float[][] WEST_FACE = {{0, 0, 1}, {0, 0, 0}, {0, 0, 0}, {0, 0, 1}};
+        private static final float[] NORTH_NORMAL = {0, 0, -1};
+        private static final float[] SOUTH_NORMAL = {0, 0, 1};
+        private static final float[] EAST_NORMAL = {1, 0, 0};
+        private static final float[] WEST_NORMAL = {-1, 0, 0};
+
         private static final float SHADE_UP = 1.0F;
         private static final float SHADE_NORTH_SOUTH = 0.8F;
         private static final float SHADE_EAST_WEST = 0.6F;
@@ -405,39 +416,37 @@ public abstract class CopycatBlockBase extends BlockExtension implements BlockWi
             final float shade;
             switch (direction) {
                 case NORTH:
-                    corners = new float[][]{{0, yMax, 0}, {1, yMax, 0}, {1, yMin, 0}, {0, yMin, 0}};
-                    normal = new float[]{0, 0, -1};
+                    corners = NORTH_FACE;
+                    normal = NORTH_NORMAL;
                     shade = SHADE_NORTH_SOUTH;
                     break;
                 case SOUTH:
-                    corners = new float[][]{{1, yMax, 1}, {0, yMax, 1}, {0, yMin, 1}, {1, yMin, 1}};
-                    normal = new float[]{0, 0, 1};
+                    corners = SOUTH_FACE;
+                    normal = SOUTH_NORMAL;
                     shade = SHADE_NORTH_SOUTH;
                     break;
                 case EAST:
-                    corners = new float[][]{{1, yMax, 0}, {1, yMax, 1}, {1, yMin, 1}, {1, yMin, 0}};
-                    normal = new float[]{1, 0, 0};
+                    corners = EAST_FACE;
+                    normal = EAST_NORMAL;
                     shade = SHADE_EAST_WEST;
                     break;
                 case WEST:
-                    corners = new float[][]{{0, yMax, 1}, {0, yMax, 0}, {0, yMin, 0}, {0, yMin, 1}};
-                    normal = new float[]{-1, 0, 0};
+                    corners = WEST_FACE;
+                    normal = WEST_NORMAL;
                     shade = SHADE_EAST_WEST;
                     break;
                 default:
                     return;
             }
-            final float[] u = {u1, u0, u0, u1};
-            final float[] v = {vTop, vTop, vBottom, vBottom};
             final float shadedRed = red * shade;
             final float shadedGreen = green * shade;
             final float shadedBlue = blue * shade;
 
             for (int i = 0; i < 4; i++) {
                 final float[] corner = corners[i];
-                consumer.vertex(pose.pose(), corner[0], corner[1], corner[2])
+                consumer.vertex(pose.pose(), corner[0], i < 2 ? yMax : yMin, corner[2])
                         .color(shadedRed, shadedGreen, shadedBlue, 1.0F)
-                        .uv(u[i], v[i])
+                        .uv(i == 0 || i == 3 ? u1 : u0, i < 2 ? vTop : vBottom)
                         .uv2(light)
                         .normal(pose.normal(), normal[0], normal[1], normal[2])
                         .endVertex();

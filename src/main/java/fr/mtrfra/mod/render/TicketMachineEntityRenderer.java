@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 public class TicketMachineEntityRenderer extends EntityRenderer<TicketMachineEntity> {
 
     private final Supplier<BlockRegistryObject> blockSupplier;
+    private BlockState cachedBlockState;
 
     public TicketMachineEntityRenderer(Argument argument, Supplier<BlockRegistryObject> blockSupplier) {
         super(argument);
@@ -37,10 +38,13 @@ public class TicketMachineEntityRenderer extends EntityRenderer<TicketMachineEnt
         final GraphicsHolderAccessor accessor = (GraphicsHolderAccessor) (Object) graphicsHolder;
         final PoseStack poseStack = accessor.getMatrixStack();
         final MultiBufferSource bufferSource = accessor.getVertexConsumerProvider();
-        final BlockState state = (BlockState) blockSupplier.get().get().getDefaultState()
-                .with(new Property<>(DirectionHelper.FACING.data), Direction.SOUTH.data)
-                .with(new Property<>(IBlock.HALF.data), IBlock.DoubleBlockHalf.LOWER)
-                .data;
+        if (cachedBlockState == null) {
+            cachedBlockState = (BlockState) blockSupplier.get().get().getDefaultState()
+                    .with(new Property<>(DirectionHelper.FACING.data), Direction.SOUTH.data)
+                    .with(new Property<>(IBlock.HALF.data), IBlock.DoubleBlockHalf.LOWER)
+                    .data;
+        }
+        final BlockState state = cachedBlockState;
 
         final BlockRenderDispatcher dispatcher = Minecraft.getInstance().getBlockRenderer();
 
