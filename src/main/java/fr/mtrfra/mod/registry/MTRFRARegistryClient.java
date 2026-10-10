@@ -33,6 +33,7 @@ public final class MTRFRARegistryClient {
         ModBlockEntityRenderers.registerClient();
         ModEntityRenderers.registerClient();
         ModEvents.registerClient();
+        REGISTRY_CLIENT.eventRegistryClient.registerResourceReloadEvent(fr.mtrfra.mod.block.copycat.CopycatBlockBase.Renderer::clearModelCache);
         ModNetworking.registerClient();
 
         for (ItemRegistryObject item : ModItems.RAIL_CONNECTORS.values()) {

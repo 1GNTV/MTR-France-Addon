@@ -277,6 +277,52 @@ public abstract class CopycatBlockBase extends BlockExtension implements BlockWi
 
     public static class Renderer extends BlockEntityRenderer<BlockEntity> {
 
+        // Cache material/texture quads by model identity and imitated block state.
+        // Weak model keys naturally discard stale model generations after F3+T.
+        // The cached quads follow the exact random-seed and face-query order used
+        // by the original renderer, preserving models that use weighted variants.
+        private static final java.util.Map<BakedModel, java.util.Map<net.minecraft.world.level.block.state.BlockState, CachedQuads>>
+                QUADS_BY_MODEL = new java.util.WeakHashMap<>();
+
+        private static final class CachedQuads {
+            final List<BakedQuad>[] sides;
+            final List<BakedQuad> up;
+            final List<BakedQuad> down;
+            final List<BakedQuad> unculled;
+
+            @SuppressWarnings("unchecked")
+            CachedQuads(BakedModel model, net.minecraft.world.level.block.state.BlockState mimic) {
+                //? if >=1.19 {
+                final RandomSource random = RandomSource.create(42L);
+                //? } else {
+                /*final java.util.Random random = new java.util.Random(42L);
+                *///? }
+                sides = (List<BakedQuad>[]) new List<?>[HORIZONTAL_DIRECTIONS.length];
+                for (int i = 0; i < HORIZONTAL_DIRECTIONS.length; i++) {
+                    sides[i] = java.util.List.copyOf(model.getQuads(mimic, HORIZONTAL_DIRECTIONS[i], random));
+                }
+                up = java.util.List.copyOf(model.getQuads(mimic, net.minecraft.core.Direction.UP, random));
+                down = java.util.List.copyOf(model.getQuads(mimic, net.minecraft.core.Direction.DOWN, random));
+                unculled = java.util.List.copyOf(model.getQuads(mimic, null, random));
+            }
+        }
+
+        private static CachedQuads cachedQuads(BakedModel model, net.minecraft.world.level.block.state.BlockState mimic) {
+            final java.util.Map<net.minecraft.world.level.block.state.BlockState, CachedQuads> byState =
+                    QUADS_BY_MODEL.computeIfAbsent(model, key ->
+                            new java.util.LinkedHashMap<net.minecraft.world.level.block.state.BlockState, CachedQuads>(32, 0.75F, true) {
+                                @Override
+                                protected boolean removeEldestEntry(java.util.Map.Entry<net.minecraft.world.level.block.state.BlockState, CachedQuads> eldest) {
+                                    return size() > 256;
+                                }
+                            });
+            return byState.computeIfAbsent(mimic, key -> new CachedQuads(model, mimic));
+        }
+
+        public static void clearModelCache() {
+            QUADS_BY_MODEL.clear();
+        }
+
         public Renderer(Argument dispatcher) {
             super(dispatcher);
         }
@@ -299,15 +345,12 @@ public abstract class CopycatBlockBase extends BlockExtension implements BlockWi
             final VertexConsumer consumer = bufferSource.getBuffer(renderType);
 
             final BakedModel bakedModel = Minecraft.getInstance().getBlockRenderer().getBlockModel(mimic);
-            //? if >=1.19 {
-            final RandomSource random = RandomSource.create(42L);
-            //? } else {
-            /*final java.util.Random random = new java.util.Random(42L);
-            *///? }
+            final CachedQuads cachedQuads = cachedQuads(bakedModel, mimic);
             final BlockColors blockColors = Minecraft.getInstance().getBlockColors();
 
-            for (final net.minecraft.core.Direction direction : HORIZONTAL_DIRECTIONS) {
-                final List<BakedQuad> quads = bakedModel.getQuads(mimic, direction, random);
+            for (int directionIndex = 0; directionIndex < HORIZONTAL_DIRECTIONS.length; directionIndex++) {
+                final net.minecraft.core.Direction direction = HORIZONTAL_DIRECTIONS[directionIndex];
+                final List<BakedQuad> quads = cachedQuads.sides[directionIndex];
                 if (quads.isEmpty()) {
                     continue;
                 }
@@ -324,11 +367,11 @@ public abstract class CopycatBlockBase extends BlockExtension implements BlockWi
 
             poseStack.pushPose();
             poseStack.translate(0.0, totalHeight - 1.0, 0.0);
-            drawQuads(consumer, poseStack, bakedModel.getQuads(mimic, net.minecraft.core.Direction.UP, random), mimic, level, pos, light, overlay);
+            drawQuads(consumer, poseStack, cachedQuads.up, mimic, level, pos, light, overlay);
             poseStack.popPose();
 
-            drawQuads(consumer, poseStack, bakedModel.getQuads(mimic, net.minecraft.core.Direction.DOWN, random), mimic, level, pos, light, overlay);
-            drawQuads(consumer, poseStack, bakedModel.getQuads(mimic, null, random), mimic, level, pos, light, overlay);
+            drawQuads(consumer, poseStack, cachedQuads.down, mimic, level, pos, light, overlay);
+            drawQuads(consumer, poseStack, cachedQuads.unculled, mimic, level, pos, light, overlay);
 
             if (blockEntity.isLocked()) {
                 drawLockedOutline(blockEntity.getPos2(), totalHeight);
