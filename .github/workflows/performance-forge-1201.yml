@@ -36,11 +36,17 @@ jobs:
                   refmap_name = config.get("refmap")
                   if refmap_name != "mtrfranceaddon.refmap.json" or refmap_name not in z.namelist():
                       sys.exit(f"{jar}: Mixin refmap is missing or not declared")
-                  mappings = json.loads(z.read(refmap_name)).get("mappings", {})
-                  creative = mappings.get("fr.mtrfra.mod.mixin.tab.CreativeModeTabMixin", {})
-                  if not any("buildContents" in key for key in creative):
-                      sys.exit(f"{jar}: no mapped CreativeModeTab.buildContents injector target; keys={list(creative)}")
-                  print(f"Verified: {jar}, creative-target={creative}")
+                  remap = json.loads(z.read(refmap_name))
+                  # MixinGradle may emit only loader-specific sections under "data".
+                  sections = [remap.get("mappings", {})] + list(remap.get("data", {}).values())
+                  target = "fr.mtrfra.mod.mixin.tab.CreativeModeTabMixin"
+                  creative_entries = [section.get(target, {}) for section in sections]
+                  print("Refmap sections:", [(name, list(section.keys())[:10]) for name, section in
+                        [("default", remap.get("mappings", {})), *list(remap.get("data", {}).items())]])
+                  matches = [entry for entry in creative_entries if any("buildContents" in key for key in entry)]
+                  if not matches:
+                      sys.exit(f"{jar}: no mapped CreativeModeTab.buildContents injector target; entries={creative_entries}")
+                  print(f"Verified: {jar}, creative-target={matches}")
           PY
       - uses: actions/upload-artifact@v4
         with:
